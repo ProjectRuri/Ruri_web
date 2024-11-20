@@ -11,6 +11,109 @@
     <h3>
         test
     </h3>
+    <hr>
+    {% block content %}
+    <form method='post' enctype="multipart/form-data" action="" id="recordingsList">
+        {% csrf_token %}
+
+        {% if form.errors %}
+
+        {% endif %}
+        <input type="text" name="name" id="input_text">
+        <!-- <input type="file" name="content" id="input_target_file" accept=""> -->
+        <input type="submit">
+
+        <button type="button" id="recordButton">녹음 시작</button>
+        <button type="button" id="stopButton" disabled>녹음 중지</button>
+        <button type="button" id="playButton" disabled>재생</button>
+    </form>
+    {% endblock %}
+
+    <script>
+        // mic record start
+        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+
+        var recordButton = document.getElementById('recordButton');
+        var stopButton = document.getElementById('stopButton');
+        var playButton = document.getElementById('playButton');
+        var recordingsList = document.getElementById('recordingsList');
+
+        var input_text = document.getElementById('input_text');
+        var input_field = document.getElementById("input_target_file");
+
+        var mediaRecorder;
+        var audioChunks = [];
+
+        recordButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', stopRecording);
+        playButton.addEventListener('click', uploadRecording);
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function (stream) {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = function (e) {
+                        audioChunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = function () {
+                        var blob = new Blob(audioChunks, { 'type': 'audio/wav' });
+                        audioChunks = [];
+                        var audioURL = window.URL.createObjectURL(blob);
+                        var audio = document.createElement('audio');
+                        audio.controls = true;
+                        audio.src = audioURL;
+                        //media폴더로 전송 전처리
+                        audio.setAttribute('name', 'content');
+                        //전처리 끝
+                        recordingsList.appendChild(audio);
+                        playButton.disabled = false;
+                    };
+                    mediaRecorder.start();
+                    recordButton.disabled = true;
+                    stopButton.disabled = false;
+                })
+                .catch(function (err) {
+                    console.error('음성 녹음을 시작하는데 문제가 발생했습니다: ' + err);
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            recordButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        function playRecording() {
+            var audio = new Audio(recordingsList.lastChild.src);
+            audio.play();
+        }
+        function uploadRecording() {
+            var blob = new Blob(audioChunks, { 'type': 'audio/wav' });
+            var formData = new FormData();
+            formData.append('content', blob, 'recorded_audio.wav');
+            formData.append('name', input_text.text);
+
+            fetch('/ruri/upload/', {
+                method: 'post',
+                body: formData
+
+            })
+                .then(response => response.text())
+                .then(data => {
+                    console.log('서버 응답:', data);
+                    alert('파일 업로드가 완료되었습니다.');
+                })
+                .catch(error => {
+                    console.error('파일 업로드 중 오류 발생:', error);
+                    alert('파일 업로드 중 오류가 발생했습니다.');
+                });
+
+        }
+        // mic record end
+    </script>
+
+
 </body>
 
 </html>

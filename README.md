@@ -12,3 +12,6 @@ python manage.py migrate
 python manage.py runserver
 
 ## pyAI로 전달해야하는 파일의 확장자 - wav
+
+## 다음 작업
+https://bamgorae.tistory.com/59
